@@ -1,0 +1,118 @@
+# app.kv_file_dir:
+# The path to the theme which is defined in the global configuration file
+
+# root.height
+# The height of the parent node as integer
+
+# root.width
+# The width of the parent node as integer
+
+<SpotifyScreen>
+    # The screen used as part of the kivy.uix.ScreenManager object of the
+    # application. The name 'spotify' and the id 'spotify_gui'
+    # predefined and must not be changed.
+    id: spotify_gui
+    name: 'spotify'
+    size: root.size
+
+    canvas.before:
+        # set the background image as rectangle source, the transparency of the
+        # background image is defined in the Color as RGBA value.
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            id: rectangle_background
+            pos: self.pos
+            size: self.size
+            source: '{0}/default/wallpapers/background.png'.format(app.kv_file_dir)
+
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint: 1, None
+        width: 400
+        height: 50
+        spacing: 30
+        pos: root.width - 25 -self.width, root.height - self.height - 25
+
+        Label:
+        Label:
+            id: system_message_label
+        Label:
+
+        ImageButton:
+            # The volume control button. This control will bind to open the volume control
+            # popup in the InterfaceApp::init_mpd() function. The id volume_control_button
+            # is predefined and must not be changed.
+            id: volume_control_button
+            size_hint: None, None
+            size: 48, 48
+            pos: root.width - self.width -25, root.height - self.height - 25
+            source:
+                '{0}/default/48x48/volume-medium.png'.format(app.kv_file_dir)
+
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+
+            BoxLayout:
+                orientation: 'horizontal'
+                spacing: 10
+
+                AsyncImage:
+                    # The image displayed during playback, usually the album cover.
+                    # The id spotify_album_art is predefined and mus not be changed.
+                    id: album_art
+                    source: '{0}/default/misc/no_artwork.png'.format(app.kv_file_dir)
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: '20'
+
+                    Label:
+
+                    Label:
+                        # This label shows the title of the current played song.
+                        # The id spotify_title_label is predefined and mus not be changed.
+                        id: title_label
+                        text: ""
+                        font_size: 28
+                    Label:
+                        # This label shows the album name of the current played song.
+                        # The id spotify_album_label is predefined and mus not be changed.
+                        id: album_label
+                        text: ""
+                        font_size: 18
+                        size_hint_y: 0.20
+                    Label:
+                        # This label shows the artist name of the current played song.
+                        # The id spotify_artist_label is predefined and mus not be changed.
+                        id: artist_label
+                        text: ""
+                        font_size: 18
+                        size_hint_y: 0.20
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: 48
+
+            ImageButton:
+                # This control is bind to the function MpdControl.previous() to jump
+                # to the previous song in the playlist. The id mpd_previous_btn is predefined
+                # and mus not be changed.
+                id: previous_btn
+                source: '{0}/default/48x48/skip-previous.png'.format(app.kv_file_dir)
+
+            ImageButton:
+                # This control is bind to the function MpdControl.toggle_play_pause() to toggle
+                # between play and pause. The id mpd_play_pause_btn is predefined and mus not be
+                # changed.
+                id: play_pause_btn
+                source: '{0}/default/48x48/play.png'.format(app.kv_file_dir)
+
+            ImageButton:
+                # This control is bind to the function MpdControl.next() to jump to the next song
+                # in the playlist. The id mpd_next_btn is predefined and mus not be changed.
+                id: next_btn
+                source: '{0}/default/48x48/skip-next.png'.format(app.kv_file_dir)

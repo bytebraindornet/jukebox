@@ -1,0 +1,25 @@
+<VolumeSliderPopup>
+    slider: volume_slider
+    mute_btn: toggle_mute
+
+    size_hint: None, None
+    id: volume_control_popup
+    size: 100, 300
+    auto_dismiss: True
+    title: 'volume'
+
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: 10
+
+        Slider:
+            id: volume_slider
+            size_hint_y: 0.75
+            orientation: 'vertical'
+            value_track_color: 0.184, 0.655, 0.831, 1.0
+            value_track: True
+
+        ImageButton:
+            id: toggle_mute
+            size_hint_y: 0.25
+            source: '{0}/default/48x48/volume-mute.png'.format(app.kv_file_dir)
