@@ -3,6 +3,7 @@ import configparser
 import subprocess
 
 from pathlib import Path
+from kivy.config import Config as KivyConfig
 
 
 class Config:
@@ -49,43 +50,11 @@ class Config:
 
         # Load defaults if no configuration is found
         if self.config_file is None:
-            # create default configuration if no config file can be found and set
-            # all mandatory parameters
-
-            home = Path.home()
-
-            spotify_cache = Path('.cache/{appname}/spotify_cache'.format(appname=self.DEFAULT_APPNAME))
-            spotify_cache = home.joinpath(spotify_cache)
-            spotify_cache.mkdir(parents=True, exist_ok=True)
-
-            self.parser['system'] = {
-                'fullscreen': 'yes',
-                'mqttHost': 'localhost',
-                'mqttPort': 1883,
-                'mqttKeepAlive': 60,
-                'logLevel': 'debug'     # error, info, debug
-            }
-
-            self.parser['spotify'] = {
-                'enable': 'yes',
-                'name': str(self.DEFAULT_APPNAME),
-                'bitrate': 320,
-                'cache': str(spotify_cache),
-                'initialvolume': 75,
-                'devicetype': 'avr',
-                'normalization': 'no',
-                'eventgateway': '{cwd}/spotify/spotifyeventgateway.py'.format(cwd=os.getcwd())
-            }
-
-            if os.path.isdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME)) is False:
-                os.mkdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME))
-            self.config_file = os.path.join(str(Path.home()), self.DEFAULT_CONFIG_FILE)
-            with open(self.config_file, "w") as fp_cfg_file:
-                self.parser.write(fp_cfg_file)
+            self.set_defaults()
         else:
             self.parser.read(self.config_file)
 
-    def print_config(self):
+    def print(self):
         """
         This function print the configuration to stdout
         """
@@ -93,3 +62,39 @@ class Config:
             print("\n{key}".format(key=cfg_key.center(60, "=")))
             for item_key, item_value in cfg_value.items():
                 print("{key:<15}: {value}".format(key=item_key, value=item_value))
+
+    def set_defaults(self):
+        # create default configuration if no config file can be found and set
+        # all mandatory parameters
+
+        home = Path.home()
+
+        spotify_cache = Path('.cache/{appname}/spotify_cache'.format(appname=self.DEFAULT_APPNAME))
+        spotify_cache = home.joinpath(spotify_cache)
+        spotify_cache.mkdir(parents=True, exist_ok=True)
+
+        self.parser['system'] = {
+            'fullscreen': 'yes',
+            'mqttHost': 'localhost',
+            'mqttPort': 1883,
+            'mqttKeepAlive': 60,
+            'logLevel': 'debug',  # error, info, debug
+            'logFile': '/var/log/{app}.log'.format(app=self.DEFAULT_APPNAME)
+        }
+
+        self.parser['spotify'] = {
+            'enable': 'yes',
+            'name': str(self.DEFAULT_APPNAME),
+            'bitrate': 320,
+            'cache': str(spotify_cache),
+            'initialvolume': 75,
+            'devicetype': 'avr',
+            'normalization': 'no',
+            'eventgateway': '{cwd}/spotify/spotifyeventgateway.py'.format(cwd=os.getcwd())
+        }
+
+        if os.path.isdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME)) is False:
+            os.mkdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME))
+        self.config_file = os.path.join(str(Path.home()), self.DEFAULT_CONFIG_FILE)
+        with open(self.config_file, "w") as fp_cfg_file:
+            self.parser.write(fp_cfg_file)

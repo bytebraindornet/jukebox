@@ -1,3 +1,4 @@
+import os
 import subprocess
 import spotipy
 import paho.mqtt.client as mqtt
@@ -5,6 +6,7 @@ import paho.mqtt.client as mqtt
 from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.event import EventDispatcher
 from system.configuration import Config
+from system.logger import Logger
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
 from spotify.spotifyerror import SpotifyApiError
 
@@ -20,24 +22,20 @@ class SpotifyConnectServer(EventDispatcher):
         Initialize self. See help(self) for accurate signature.
         """
         self.cfg = Config().parser
+        self.log = Logger()
+        self.name = os.path.basename(__file__)
+
         self.repeat = False
         self.random = False
         self._event_ = None
         self._process_ = None
         self._spotify_ = None
         self._mqtt_client_ = None
-        self.spotify_track_id = ""
         self.running = False
 
-        try:
-            self._spotify_ = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
-                client_id='8217cc054f854c5a8a5c5b0bb7ff55bf',
-                client_secret='d344812b4d874d1aaa60731a6ce567bb'
-            ))
-        except Exception as err:
-            print("unable to instantiate spotipy: {}".format(err))
+        self.register_event_type('on_track_event')
+        self.register_event_type('on_player_event')
 
-        self.register_event_type('on_track_changed')
         super(SpotifyConnectServer, self).__init__(**kwargs)
 
     def start(self):
@@ -66,6 +64,11 @@ class SpotifyConnectServer(EventDispatcher):
 
         if volume_normalization is True:
             cmd.append('--enable-volume-normalisation')
+
+        self.log.write(message="{cmd}".format(cmd=cmd),
+                       module=self.name,
+                       level=Logger.DEBUG)
+
         self._process_ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _librespot_is_running_ = self._process_.poll() is None
 
@@ -77,11 +80,22 @@ class SpotifyConnectServer(EventDispatcher):
             self._mqtt_client_.loop_start()
             _mqtt_is_running_ = True
 
+            self.log.write(message="Successfully connect to MQTT broker",
+                           module=self.name,
+                           level=Logger.DEBUG)
+
         except ConnectionRefusedError as err:
+            self.log.write(message="Failed to connect to MQTT broker: {err}".format(err=err),
+                           module=self.name,
+                           level=Logger.ERROR)
             self._process_.kill()
             raise MQTTConnectionRefusedError
 
         self.running = _mqtt_is_running_ and _librespot_is_running_
+        if self.running:
+            self.log.write(message="SpotifyConnectServer is running.",
+                           module=self.name,
+                           level=Logger.INFO)
 
     def stop(self):
         """
@@ -101,8 +115,7 @@ class SpotifyConnectServer(EventDispatcher):
         self.stop()
         self.start()
 
-    @staticmethod
-    def on_connect(client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, rc):
         """
         This function is called by mqtt client if receives a CONACK.
         :param client: the mqtt client as instance of paho.mqtt.client.Client()
@@ -119,6 +132,9 @@ class SpotifyConnectServer(EventDispatcher):
         """
         if rc == 0:
             client.subscribe("spotify/#")
+            self.log.write(message="spotify/# channel subscribed.",
+                           module=self.name,
+                           level=Logger.INFO)
 
     def on_message(self, client, userdata, msg):
         """
@@ -128,33 +144,31 @@ class SpotifyConnectServer(EventDispatcher):
         :param userdata: the private user data as set in Client() or user_data_set()
         :param msg: an instance of MQTTMessage. This is a class with members topic, payload, qos, retain.
         """
-        if msg.topic == "spotify/track_id":
-            self.get_information(msg.payload.decode("utf-8"))
+        if msg.topic == "spotify/track_event":
+            payload = msg.payload.decode("utf-8")
+            self.dispatch('on_track_event', payload)
+            self.log.write(message="on_message::{client}, {userdata}, {msg}".format(client=client, userdata=userdata, msg=payload),
+                           module=self.name,
+                           level=Logger.DEBUG)
+
+        elif msg.topic == "spotify/player_event":
+            payload = msg.payload.decode("utf-8")
+            self.dispatch('on_player_event', payload)
+            self.log.write(message="on_message::{client}, {userdata}, {msg}".format(client=client, userdata=userdata, msg=payload),
+                           module=self.name,
+                           level=Logger.DEBUG)
 
         else:
-            print("Message topic: {topic}".format(topic=msg.topic))
+            self.log.write(message="on_message::Unknown topic {topic} on subscribed channel.".format(topic=msg.topic),
+                           module=self.name,
+                           level=Logger.DEBUG)
 
-    def get_information(self, spotify_track_id):
-        """
-        This function get information about the current track by using the trackid and publish
-        via MQTT message with topic spotify/track_information.
-        """
-        try:
-            _track_ = self._spotify_.track('spotify:track:{trackid}'.format(trackid=spotify_track_id))
+    def on_track_event(self, *args):
+        self.log.write(message="on_track_event::{args} called.".format(args=args),
+                       module=self.name,
+                       level=Logger.DEBUG)
 
-            track = {
-                'artist': _track_.get('artists', None),
-                'album': _track_.get('album', None),
-                'track': _track_.get('name', self.spotify_track_id),
-                'image': _track_.get('album', None).get('images', None)
-            }
-            print(track)
-
-            return track
-
-        except Exception as err:
-            print("Error occurred: {err}".format(err=err))
-            raise SpotifyApiError
-
-    def on_track_changed(self, *args):
-        print("I'm dispatched", args)
+    def on_player_event(self, args):
+        self.log.write(message="on_player_event::{args} called.".format(args=args),
+                       module=self.name,
+                       level=Logger.DEBUG)

@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import configparser
 import paho.mqtt.client as mqtt
+
 from pathlib import Path
+
+jukebox_sys_path = Path(os.path.abspath(os.path.dirname(__file__))).parent
+sys.path.insert(0, "{path}".format(path=jukebox_sys_path))
+from system.logger import Logger
+from system.configuration import Config
 
 """
 The spotifyeventgateway.py is the script that gets run when one of librespot's events is triggered.
@@ -13,56 +20,30 @@ MQTT topics:
     spotify/track_id:     is published when librespot publish the spotify track id
 """
 
-
-def read_config():
-    """
-    This function read the host, port and keep alive parameters from one of the following
-    files to connect to the MQTT broker
-        1. $HOME/.config/bytebrain/gui.ini
-        2. $HOME/.bytebrain.ini
-        3. /etc/bytebrain/gui.ini
-    The first file which is found been used.
-    """
-    default_config_file = os.path.join(".config", "bytebrain", "gui.ini")
-    config_file = None
-
-    if os.path.isfile(os.path.join(str(Path.home()), default_config_file)):
-        config_file = os.path.join(str(Path.home()), default_config_file)
-    elif os.path.isfile(os.path.join(str(Path.home()), ".bytebrain.ini")):
-        config_file = os.path.join(str(Path.home()), ".bytebrain.ini")
-    elif os.path.isfile(os.path.join("etc", "bytebrain", "gui.ini")):
-        os.path.join("etc", "bytebrain", "gui.ini")
-
-    if config_file is not None:
-        cfg_parser = configparser.ConfigParser()
-        cfg_parser.read(config_file)
-        mqtt_host = cfg_parser.get('system', 'mqttHost')
-        mqtt_port = cfg_parser.getint('system', 'mqttPort')
-        mqtt_keep_alive = cfg_parser.getint('system', 'mqttKeepAlive')
-    else:
-        mqtt_host = 'localhost'
-        mqtt_port = 1883
-        mqtt_keep_alive = 60
-
-    return {
-        'mqtt_host': mqtt_host,
-        'mqtt_port': mqtt_port,
-        'mqtt_keep_alive': mqtt_keep_alive
-    }
-
-
+name = os.path.basename(__file__)
 player_event = os.environ.get('PLAYER_EVENT', None)
 track_id = os.environ.get('TRACK_ID', None)
+Logger().write(message="Player event: {event}".format(event=player_event), module=name, level=Logger.DEBUG)
+Logger().write(message="Track event: {event}".format(event=track_id), module=name, level=Logger.DEBUG)
 
-print(track_id, player_event)
+cfg = Config().parser
+host = cfg.get('system', 'mqttHost')
+port = cfg.getint('system', 'mqttPort')
+keep_alive = cfg.getint('system', 'mqttKeepAlive')
 
-cfg = read_config()
-host = cfg['mqtt_host']
-port = cfg['mqtt_port']
-keep_alive = cfg['mqtt_keep_alive']
+try:
+    client = mqtt.Client()
+    client.connect(host, port=port, keepalive=keep_alive)
+    if track_id is not None:
+        client.publish("spotify/track_event", track_id)
+    if player_event is not None:
+        client.publish("spotify/player_event", player_event)
+    client.disconnect()
+    Logger().write(message="Message successfully sent to MQTT broker.",
+                   module=name,
+                   level=Logger.DEBUG)
 
-client = mqtt.Client()
-client.connect(host, port=port, keepalive=keep_alive)
-client.publish("spotify/player_event", player_event)
-client.publish("spotify/track_id", track_id)
-client.disconnect()
+except ConnectionRefusedError as err:
+    Logger().write(message="Failed to connect to MQTT broker: {err}".format(err=err),
+                   module=name,
+                   level=Logger.ERROR)

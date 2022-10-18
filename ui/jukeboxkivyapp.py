@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import os
-from pathlib import Path
+import spotipy
 
+from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
 from kivy.uix.image import Image
 from kivy.uix.screenmanager import Screen, ScreenManager
@@ -13,6 +14,7 @@ from kivy.lang import Builder
 from ui.volumesliderpopup import VolumeSliderPopup
 from system.volumecontrol import VolumeControl
 from system.configuration import Config
+from system.logger import Logger
 from spotify.spotifyconnectserver import SpotifyConnectServer
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
 from spotify.spotifyerror import SpotifyApiError
@@ -70,7 +72,10 @@ class JukeBoxKivyApp(App):
     kv_file_dir = Config.DEFAULT_KV_DIR
     volume_slider_popup = None
     volume_control = None
-    #Window.fullscreen = True
+    log = Logger()
+    mod_name = os.path.basename(__file__)
+
+    _current_track_id_ = None
 
     def __init__(self, **kwargs):
         super(JukeBoxKivyApp, self).__init__()
@@ -115,31 +120,105 @@ class JukeBoxKivyApp(App):
         except MQTTConnectionRefusedError as err:
             system_message_label = self.screen_manager.get_screen('spotify').ids.system_message_label
             system_message_label.text = "Unable to connect to MQTT broker."
-            print("ERR: {err}".format(err=err))
+            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
 
         except SpotifyApiError as err:
             system_message_label = self.screen_manager.get_screen('spotify').ids.system_message_label
             system_message_label.text = "Spotify server not started."
-            print("ERR: {err}".format(err=err))
+            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
 
         except Exception as err:
             system_message_label = self.screen_manager.get_screen('spotify').ids.system_message_label
             system_message_label.text = "ERR: {err}".format(err=err)
-            print("ERR: {err}".format(err=err))
+            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
 
     def build(self):
         Window.bind(on_request_close=self.on_request_close)
-        self.spotify_srv.bind(on_artist_changed=self.on_artist_changed)
+        self.spotify_srv.bind(on_track_event=self.on_track_event)
+        self.spotify_srv.bind(on_player_event=self.on_player_event)
 
         self.init_volume_control()
         self.init_spotify_screen()
         self.init_spotify_server()
 
+        Window.size = (1024, 640)
+
         return self.screen_manager
 
     def on_request_close(self, *args):
         print("{appname} is closing....".format(appname=Config.DEFAULT_APPNAME))
+        self.log.write(message="{appname} is closing....".format(appname=Config.DEFAULT_APPNAME),
+                       module=self.mod_name,
+                       level=Logger.INFO)
         self.spotify_srv.stop()
 
-    def on_artist_changed(self, *args):
-        print("on artist changed: {args}".format(args=args))
+    def on_track_event(self, *args):
+        track_id = args[1]
+        if self._current_track_id_ != track_id:
+            self._current_track_id_ = track_id
+            self.log.write(message="New track id: {trackid}".format(trackid=track_id),
+                           module=self.mod_name,
+                           level=Logger.INFO)
+
+            _track_ = self.get_information(track_id)
+
+            artist = _track_['artist']
+            artist_name = []
+            for item in artist:
+                artist_name.append(item.get('name'))
+            artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
+            artist_label.text = " ".join(artist_name)
+
+            album = _track_['album']
+            album_label = self.screen_manager.get_screen('spotify').ids.album_label
+            album_label.text = album['name']
+
+            title = _track_['track']
+            title_label = self.screen_manager.get_screen('spotify').ids.title_label
+            title_label.text = title
+
+            for img in _track_['image']:
+                if img.get('height') == 640:
+                    self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
+                    break
+
+        self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
+
+    def on_player_event(self, *args):
+        self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
+
+    def get_information(self, spotify_track_id):
+        """
+        This function get information about the current track by using the trackid and publish
+        via MQTT message with topic spotify/track_information.
+        """
+        self.log.write(message="Track ID: {trackid}".format(trackid=spotify_track_id),
+                       module=self.name,
+                       level=Logger.DEBUG)
+        if spotify_track_id:
+            try:
+                _spotify_ = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+                    client_id='8217cc054f854c5a8a5c5b0bb7ff55bf',
+                    client_secret='d344812b4d874d1aaa60731a6ce567bb'
+                ))
+
+                _track_ = _spotify_.track('spotify:track:{trackid}'.format(trackid=spotify_track_id))
+                track = {
+                    'artist': _track_.get('artists', None),
+                    'album': _track_.get('album', None),
+                    'track': _track_.get('name', spotify_track_id),
+                    'image': _track_.get('album', None).get('images', None)
+                }
+                self.log.write(message="Track information received from Spotify.",
+                               module=self.name,
+                               level=Logger.INFO)
+                self.log.write(message="{track}".format(track=track),
+                               module=self.name,
+                               level=Logger.DEBUG)
+                return track
+
+            except Exception as err:
+                self.log.write(message="Unable to get information from Spotify: {err}".format(err=err),
+                               module=self.name,
+                               level=Logger.ERROR)
+                raise SpotifyApiError
