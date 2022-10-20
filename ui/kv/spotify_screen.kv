@@ -19,12 +19,16 @@
         # set the background image as rectangle source, the transparency of the
         # background image is defined in the Color as RGBA value.
         Color:
-            rgba: 1, 1, 1, 1
+            rgba: 0, 0, 0, 1
         Rectangle:
             id: rectangle_background
             pos: self.pos
             size: self.size
-            source: '{0}/default/wallpapers/background.png'.format(app.kv_file_dir)
+
+    AsyncImage:
+        id: background_image
+        source: '{0}/default/wallpapers/one_pixel.png'.format(app.kv_file_dir)
+        pos: root.x, root.y
 
     BoxLayout:
         orientation: 'horizontal'
@@ -37,6 +41,7 @@
         Label:
         Label:
             id: system_message_label
+
         Label:
 
         ImageButton:

@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
 import os
-import spotipy
 
+import spotipy
+import tempfile
+import urllib.request
+
+from PIL import Image
+from screeninfo import get_monitors
 from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
-from kivy.uix.image import Image
+from kivy.uix.image import Image as KivyImage
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.behaviors import TouchRippleButtonBehavior
 from kivy.core.window import Window
@@ -20,7 +25,7 @@ from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedE
 from spotify.spotifyerror import SpotifyApiError
 
 
-class ImageButton(TouchRippleButtonBehavior, Image):
+class ImageButton(TouchRippleButtonBehavior, KivyImage):
     """
     The class 'ImageButton' is a subclass of class kivy.uix.image.Image and
     kivy.uix.behaviors.TouchRippleButtonBehavior with associated actions that
@@ -72,8 +77,11 @@ class JukeBoxKivyApp(App):
     kv_file_dir = Config.DEFAULT_KV_DIR
     volume_slider_popup = None
     volume_control = None
+    width = 1024
+    height = 480
     log = Logger()
     mod_name = os.path.basename(__file__)
+    background_image = os.path.join(tempfile.gettempdir(), "{name}.png".format(name=Config.DEFAULT_APPNAME))
 
     _current_track_id_ = None
 
@@ -113,6 +121,15 @@ class JukeBoxKivyApp(App):
         volume_control_button = self.screen_manager.get_screen('spotify').ids.volume_control_button
         volume_control_button.bind(on_press=self.volume_slider_popup.open)
 
+    def init_window(self):
+        for monitor in get_monitors():
+            if monitor.is_primary is True:
+                self.width = monitor.width
+                self.height = monitor.height
+
+        Window.size = (self.width, self.height)
+        Window.borderless = True
+
     def init_spotify_server(self):
         try:
             self.spotify_srv.start()
@@ -137,11 +154,10 @@ class JukeBoxKivyApp(App):
         self.spotify_srv.bind(on_track_event=self.on_track_event)
         self.spotify_srv.bind(on_player_event=self.on_player_event)
 
+        self.init_window()
         self.init_volume_control()
         self.init_spotify_screen()
         self.init_spotify_server()
-
-        Window.size = (1024, 640)
 
         return self.screen_manager
 
@@ -160,16 +176,30 @@ class JukeBoxKivyApp(App):
                            module=self.mod_name,
                            level=Logger.INFO)
 
-            _track_ = self.get_information(track_id)
+            _track_ = self.get_track_information(track_id)
 
             artist = _track_['artist']
-            artist_name = []
+            self.log.write(message="New Artist: {artist}".format(artist=artist),
+                           module=self.mod_name,
+                           level=Logger.INFO)
+            artist_names = []
+            artist_ids = []
             for item in artist:
-                artist_name.append(item.get('name'))
+                artist_names.append(item.get('name'))
+                artist_ids.append(item.get('id'))
             artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
-            artist_label.text = " ".join(artist_name)
+            artist_label.text = " ".join(artist_names)
+            artists = self.get_artist_information(artist_ids)
+            _artist_images_ = artists[0].get('images')
+            for img in _artist_images_:
+                if img.get('height') == 640: # 640, 320, 160 possible
+                    self.set_background_image(img.get('url'))
+                    break
 
             album = _track_['album']
+            self.log.write(message="New Album: {album}".format(album=album),
+                           module=self.mod_name,
+                           level=Logger.INFO)
             album_label = self.screen_manager.get_screen('spotify').ids.album_label
             album_label.text = album['name']
 
@@ -178,7 +208,7 @@ class JukeBoxKivyApp(App):
             title_label.text = title
 
             for img in _track_['image']:
-                if img.get('height') == 640:
+                if img.get('height') == 300: # 640, 300 or 64 possible
                     self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
                     break
 
@@ -187,7 +217,26 @@ class JukeBoxKivyApp(App):
     def on_player_event(self, *args):
         self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
 
-    def get_information(self, spotify_track_id):
+    def get_artist_information(self, spotify_artist_ids):
+        if len(spotify_artist_ids) > 0:
+            _artist_ = []
+            for artist_id in spotify_artist_ids:
+                try:
+                    _spotify_ = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+                        client_id='8217cc054f854c5a8a5c5b0bb7ff55bf',
+                        client_secret='d344812b4d874d1aaa60731a6ce567bb'
+                    ))
+                    _artist_.append(_spotify_.artist(artist_id))
+
+                    return _artist_
+
+                except Exception as error:
+                    self.log.write(message="{error}".format(error=error),
+                                   module=self.mod_name,
+                                   level=Logger.ERROR)
+                    raise SpotifyApiError
+
+    def get_track_information(self, spotify_track_id):
         """
         This function get information about the current track by using the trackid and publish
         via MQTT message with topic spotify/track_information.
@@ -222,3 +271,14 @@ class JukeBoxKivyApp(App):
                                module=self.name,
                                level=Logger.ERROR)
                 raise SpotifyApiError
+
+    def set_background_image(self, image_url):
+        tmp_file = tempfile.mktemp()
+        urllib.request.urlretrieve(image_url, tmp_file)
+        img = Image.open(tmp_file)
+        img.resize((self.width, self.height))
+        img.save(self.background_image, "JPEG")
+
+        self.screen_manager.get_screen('spotify').ids.background_image.source = self.background_image
+
+
