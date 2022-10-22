@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import os
-
+import glob
 import spotipy
 import tempfile
 import urllib.request
 
-from PIL import Image
+from PIL import Image, ImageFilter
 from screeninfo import get_monitors
 from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
@@ -81,7 +81,6 @@ class JukeBoxKivyApp(App):
     height = 480
     log = Logger()
     mod_name = os.path.basename(__file__)
-    background_image = os.path.join(tempfile.gettempdir(), "{name}.png".format(name=Config.DEFAULT_APPNAME))
 
     _current_track_id_ = None
 
@@ -151,6 +150,8 @@ class JukeBoxKivyApp(App):
 
     def build(self):
         Window.bind(on_request_close=self.on_request_close)
+        Window.bind(on_keyboard=self.on_keyboard)
+
         self.spotify_srv.bind(on_track_event=self.on_track_event)
         self.spotify_srv.bind(on_player_event=self.on_player_event)
 
@@ -159,7 +160,14 @@ class JukeBoxKivyApp(App):
         self.init_spotify_screen()
         self.init_spotify_server()
 
+        self.set_background_image(None)
+
         return self.screen_manager
+
+    def on_keyboard(self, window, key, scancode, codepoint, modifier):
+        if modifier == ['ctrl'] and codepoint == 'q':
+            self.on_request_close()
+            self.stop()
 
     def on_request_close(self, *args):
         print("{appname} is closing....".format(appname=Config.DEFAULT_APPNAME))
@@ -175,7 +183,6 @@ class JukeBoxKivyApp(App):
             self.log.write(message="New track id: {trackid}".format(trackid=track_id),
                            module=self.mod_name,
                            level=Logger.INFO)
-
             _track_ = self.get_track_information(track_id)
 
             artist = _track_['artist']
@@ -190,11 +197,7 @@ class JukeBoxKivyApp(App):
             artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
             artist_label.text = " ".join(artist_names)
             artists = self.get_artist_information(artist_ids)
-            _artist_images_ = artists[0].get('images')
-            for img in _artist_images_:
-                if img.get('height') == 640: # 640, 320, 160 possible
-                    self.set_background_image(img.get('url'))
-                    break
+            self.set_background_image(artists[0].get('images'))
 
             album = _track_['album']
             self.log.write(message="New Album: {album}".format(album=album),
@@ -208,7 +211,7 @@ class JukeBoxKivyApp(App):
             title_label.text = title
 
             for img in _track_['image']:
-                if img.get('height') == 300: # 640, 300 or 64 possible
+                if img.get('height') == 640: # 640, 300 or 64 possible
                     self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
                     break
 
@@ -272,13 +275,44 @@ class JukeBoxKivyApp(App):
                                level=Logger.ERROR)
                 raise SpotifyApiError
 
-    def set_background_image(self, image_url):
-        tmp_file = tempfile.mktemp()
-        urllib.request.urlretrieve(image_url, tmp_file)
-        img = Image.open(tmp_file)
-        img.resize((self.width, self.height))
-        img.save(self.background_image, "JPEG")
+    def set_background_image(self, images):
+        # delete old tmp background images
+        file_list = glob.glob("/tmp/*_{appname}.png".format(appname=Config.DEFAULT_APPNAME))
+        for tmp_file in file_list:
+            os.remove(tmp_file)
 
-        self.screen_manager.get_screen('spotify').ids.background_image.source = self.background_image
+        if images is None:
+            print("reset background")
+            artist_art = self.screen_manager.get_screen('spotify').ids.artist_art
+            artist_art.source = "{0}/default/wallpapers/one_pixel.png".format(self.kv_file_dir)
+            return
 
+        image = None
+        bg_image = tempfile.mktemp(suffix="_{appname}.png".format(appname=Config.DEFAULT_APPNAME))
 
+        # find the biggest image
+        for img in images:
+            if image is None or image.get('width') < img.get('width'):
+                image = img
+
+        self.log.write(message="Use Artist background image {image}".format(image=image),
+                       module=self.mod_name,
+                       level=Logger.DEBUG)
+
+        if image is not None:
+            # download the image
+            try:
+                urllib.request.urlretrieve(image.get('url'), bg_image)
+            except Exception as err:
+                self.log.write(message="{err}".format(err=err))
+                return
+
+            # resize and crop
+            img = Image.open(bg_image)
+            img = img.resize((self.width, self.width), Image.BOX)
+            img = img.crop((10, 10, self.width, self.height))
+            img.save(bg_image)
+
+            # set the background
+            artist_art = self.screen_manager.get_screen('spotify').ids.artist_art
+            artist_art.source = bg_image

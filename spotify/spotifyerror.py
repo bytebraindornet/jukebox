@@ -6,5 +6,5 @@ class MQTTConnectionRefused(Exception):
 
 class SpotifyApiError(Exception):
     def __init__(self, message="SpotifyApiError: somthing is wrong."):
-        self.message = message
+        self.message = Exception
         super().__init__(self.message)
