@@ -31,6 +31,13 @@
         #pos: root.x, root.y
 
     BoxLayout:
+        canvas.before:
+            Color:
+                rgba: 0.5, 0.5, 0.5, 1
+            Line:
+                width: 2
+                rectangle: self.x, self.y, self.width, self.height
+
         orientation: 'horizontal'
         size_hint: 1, None
         width: 400
@@ -57,6 +64,7 @@
 
     BoxLayout:
         orientation: 'vertical'
+
         BoxLayout:
             orientation: 'horizontal'
 

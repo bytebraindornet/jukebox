@@ -1,0 +1,125 @@
+<SpotifyScreen>
+    id: spotify
+    name: 'spotify'
+    size: root.size
+
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    AsyncImage:
+        id: artist_art
+        source: '{0}/default/wallpapers/one_pixel.png'.format(app.kv_file_dir)
+
+    # Main Layout, 3 rows
+    BoxLayout:
+        orientation: 'vertical'
+
+        # Statusbar at the top
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: 1, None
+
+            Label:
+                id: system_message_label
+
+            ImageButton:
+                id: volume_control_button
+                size_hint: None, None
+                size: 48, 48
+                pos: root.width - self.width -25, root.height - self.height - 25
+                source: '{0}/default/48x48/volume-medium.png'.format(app.kv_file_dir)
+
+        # Artist, Album and Track information
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint: 1, None
+
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: 0.125, None
+                spacing: 10
+                height: 64
+                Image:
+                    source: "{0}/default/48x48/music.png".format(app.kv_file_dir)
+                    size: 100, 50
+                Label:
+                    id: title_label
+                    font_size: 28
+                    halign: 'left'
+
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: 0.125, None
+                spacing: 10
+                height: 64
+                Label: # Spacer
+                Image:
+                    source: "{0}/default/48x48/music-box-outline.png".format(app.kv_file_dir)
+                    size: 100, 50
+                Label:
+                    size_hint: None, 1
+                    id: album_label
+                    font_size: 18
+                    halign: 'left'
+
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: 0.125, None
+                spacing: 10
+                height: 64
+                Image:
+                    source: "{0}/default/48x48/account-music-outline.png".format(app.kv_file_dir)
+                    size: 100, 50
+                Label:
+                    id: artist_label
+                    font_size: 18
+                    halign: 'left'
+
+        # Album cover, progressbar and controls
+        BoxLayout:
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.75
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            orientation: 'horizontal'
+            size_hint: 1, None
+            height: 300
+
+            AsyncImage:
+                id: album_art
+                source: '{0}/default/misc/no_artwork.png'.format(app.kv_file_dir)
+                width: 300
+                height: 300
+
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: None, 1
+                width: app.width - (app.width / 3)
+                height: 48
+
+                ImageButton:
+                    # This control is bind to the function MpdControl.previous() to jump
+                    # to the previous song in the playlist. The id mpd_previous_btn is predefined
+                    # and mus not be changed.
+                    id: previous_btn
+                    source: '{0}/default/48x48/skip-previous.png'.format(app.kv_file_dir)
+
+                ImageButton:
+                    # This control is bind to the function MpdControl.toggle_play_pause() to toggle
+                    # between play and pause. The id mpd_play_pause_btn is predefined and mus not be
+                    # changed.
+                    id: play_pause_btn
+                    source: '{0}/default/48x48/play.png'.format(app.kv_file_dir)
+
+                ImageButton:
+                    # This control is bind to the function MpdControl.next() to jump to the next song
+                    # in the playlist. The id mpd_next_btn is predefined and mus not be changed.
+                    id: next_btn
+                    source: '{0}/default/48x48/skip-next.png'.format(app.kv_file_dir)

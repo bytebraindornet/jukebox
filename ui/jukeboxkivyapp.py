@@ -113,7 +113,7 @@ class JukeBoxKivyApp(App):
                 volume_control_button.source = '{0}/default/48x48/volume-high.png'.format(self.kv_file_dir)
 
     def init_spotify_screen(self):
-        Builder.load_file(os.path.join(self.kv_file_dir, "spotify_screen.kv"))
+        Builder.load_file(os.path.join(self.kv_file_dir, "spotify.kv"))
         spotify_screen = SpotifyScreen()
         self.screen_manager.add_widget(spotify_screen)
 
