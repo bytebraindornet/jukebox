@@ -11,6 +11,7 @@ from screeninfo import get_monitors
 from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
 from kivy.uix.image import Image as KivyImage
+from kivy.uix.image import AsyncImage
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.behaviors import TouchRippleButtonBehavior
 from kivy.core.window import Window
@@ -25,7 +26,7 @@ from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedE
 from spotify.spotifyerror import SpotifyApiError
 
 
-class ImageButton(TouchRippleButtonBehavior, KivyImage):
+class ImageButton(TouchRippleButtonBehavior, AsyncImage):
     """
     The class 'ImageButton' is a subclass of class kivy.uix.image.Image and
     kivy.uix.behaviors.TouchRippleButtonBehavior with associated actions that
@@ -219,6 +220,14 @@ class JukeBoxKivyApp(App):
 
     def on_player_event(self, *args):
         self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
+
+        event = args[1]
+        if event == 'playing':
+            btn = self.screen_manager.get_screen('spotify').ids.play_pause_btn
+            btn.source = '{0}/default/128x128/pause-circle-outline.png'.format(self.kv_file_dir)
+        elif event == 'paused':
+            btn = self.screen_manager.get_screen('spotify').ids.play_pause_btn
+            btn.source = '{0}/default/128x128/play-circle-outline.png'.format(self.kv_file_dir)
 
     def get_artist_information(self, spotify_artist_ids):
         if len(spotify_artist_ids) > 0:
