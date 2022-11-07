@@ -1,9 +1,7 @@
 import os
 import configparser
-import subprocess
 
 from pathlib import Path
-from kivy.config import Config as KivyConfig
 
 
 class Config:

@@ -1,0 +1,24 @@
+<BlankScreen>
+    id: blank
+    name: 'blank'
+    size: root.size
+
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # Main Layout
+    BoxLayout:
+        orientation: 'vertical'
+
+        # Statusbar at the top
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: 1, 1
+
+            Label:
+                id: system_message_label
+                font_size: 23
