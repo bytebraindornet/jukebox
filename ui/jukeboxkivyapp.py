@@ -8,11 +8,11 @@ import urllib.request
 
 from PIL import Image
 from screeninfo import get_monitors
-from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
 from kivy.uix.image import AsyncImage
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivy.uix.screenmanager import SwapTransition
+from kivy.uix.screenmanager import FadeTransition
 from kivy.uix.behaviors import TouchRippleButtonBehavior
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -221,7 +221,7 @@ class JukeBoxKivyApp(App):
         self.init_spotify_server()
 
         self.set_background_image(None)
-        self.screen_manager.transition = SwapTransition()
+        self.screen_manager.transition = FadeTransition()
         self.screen_manager.current = 'blank'
 
         return self.screen_manager
@@ -233,6 +233,15 @@ class JukeBoxKivyApp(App):
         if modifier == ['ctrl'] and codepoint == 'q':
             self.on_request_close()
             self.stop()
+
+        elif modifier == ['ctrl'] and codepoint == 'r':
+            self.log.write(message="restart librespot ....",
+                           module=self.mod_name,
+                           level=Logger.INFO)
+            system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+            system_message_label.text = "Restart Spotify client"
+            self.spotify_srv.stop()
+            self.init_spotify_server()
 
     def on_request_close(self, *args):
         """
