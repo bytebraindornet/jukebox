@@ -21,6 +21,7 @@ from kivy.clock import Clock
 from ui.volumesliderpopup import VolumeSliderPopup
 from system.volumecontrol import VolumeControl
 from system.configuration import Config
+from system.control import Control as SystemControl
 from system.logger import Logger
 from spotify.spotifyconnectserver import SpotifyConnectServer
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
@@ -92,8 +93,8 @@ class BlankScreen(BaseScreen):
 
 class JukeBoxKivyApp(App):
     """
-    The class 'JukeBoxKivyApp' is a subclass of 'kivy.app.App'. it is the main entry to the
-    application a contains the kivy run loop.
+    The class 'JukeBoxKivyApp' is a subclass of 'kivy.app.App'. It is the main entry to the
+    application and contains the kivy run loop.
     """
     screen_manager = ScreenManager()
     spotify_srv = SpotifyConnectServer()
@@ -115,7 +116,7 @@ class JukeBoxKivyApp(App):
         """
         Initialize self. See help(self) for accurate signature. Call the __init__ function
         of his parent. The global configuration is printed on stdout.
-        :param kwargs: empty at the moment
+        param kwargs: empty at the moment
         """
         super(JukeBoxKivyApp, self).__init__()
 
@@ -230,18 +231,43 @@ class JukeBoxKivyApp(App):
         """
         This function is called when a key on the keyboard is pressed.
         """
-        if modifier == ['ctrl'] and codepoint == 'q':
-            self.on_request_close()
-            self.stop()
+        if modifier == ['ctrl']:
+            if codepoint == 'q':
+                self.on_request_close()
+                self.stop()
 
-        elif modifier == ['ctrl'] and codepoint == 'r':
-            self.log.write(message="restart librespot ....",
-                           module=self.mod_name,
-                           level=Logger.INFO)
-            system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
-            system_message_label.text = "Restart Spotify client"
-            self.spotify_srv.stop()
-            self.init_spotify_server()
+            elif codepoint == 's':
+                self.log.write(message="restart librespot ....",
+                               module=self.mod_name,
+                               level=Logger.INFO)
+                system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+                system_message_label.text = "Restart Spotify client"
+                self.spotify_srv.stop()
+                self.init_spotify_server()
+
+            elif codepoint == 'r':
+                self.log.write(message="reboot the system ...",
+                               module=self.mod_name,
+                               level=Logger.INFO)
+                system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+                system_message_label.text = "Reboot the System"
+                SystemControl().reboot()
+
+            elif codepoint == 'p':
+                self.log.write(message="power off the system ...",
+                               module=self.mod_name,
+                               level=Logger.INFO)
+                system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+                system_message_label.text = "Power off the System"
+                SystemControl().poweroff()
+
+            elif codepoint == 'm':
+                self.log.write(message="restart the MQTT broker ...",
+                               module=self.mod_name,
+                               level=Logger.INFO)
+                system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+                system_message_label.text = "Restart the MQTT broker"
+                SystemControl().restart_mqtt()
 
     def on_request_close(self, *args):
         """
@@ -318,7 +344,7 @@ class JukeBoxKivyApp(App):
     def get_artist_information(self, spotify_artist_ids):
         """
         This funktion get the information about currently played artist from Spotify API.
-        :param spotify_artist_ids:, a Spotify track ID
+        param spotify_artist_ids:, a Spotify track ID
         :return: Array of all artists.
         """
         if len(spotify_artist_ids) > 0:
@@ -341,7 +367,7 @@ class JukeBoxKivyApp(App):
     def get_audio_features(self, spotify_track_id):
         """
         This function get the audio features of the currently played track from Spotify API.
-        :param spotify_track_id: a Spotify track ID
+        param spotify_track_id: a Spotify track ID
         :return: Array with audio features
         """
         if spotify_track_id:
@@ -399,7 +425,7 @@ class JukeBoxKivyApp(App):
         """
         This function change the background image. The biggest image is downloadet and modified
         to fit the application size.
-        :param images: an array of images. Each image is a dict get from Spotify API
+        param images: an array of images. Each image is a dict get from Spotify API
         """
         file_list = glob.glob("/tmp/*_{appname}.png".format(appname=Config.DEFAULT_APPNAME))
         for tmp_file in file_list:
