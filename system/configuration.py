@@ -88,6 +88,8 @@ class Config:
             'initialvolume': 75,
             'devicetype': 'avr',
             'normalization': 'no',
+            'clientid': '',
+            'clientsecret': '',
             'eventgateway': '{cwd}/spotify/spotifyeventgateway.py'.format(cwd=os.getcwd())
         }
 

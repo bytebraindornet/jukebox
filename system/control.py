@@ -23,13 +23,15 @@ class Control:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if stdout:
-            self.log.write(message="{stdout}".format(stdout=stdout),
+            self.log.write(message="{stdout}".format(stdout=stdout.decode("utf-8").strip()),
                            module=self.mod_name,
                            level=Logger.INFO)
         if stderr:
-            self.log.write(message="{stderr}".format(stderr=stderr),
+            self.log.write(message="{stderr}".format(stderr=stderr.decode("utf-8").strip()),
                            module=self.mod_name,
                            level=Logger.ERROR)
+
+        return stdout, stderr
 
     def reboot(self):
         """
@@ -45,9 +47,21 @@ class Control:
         cmd = ['sudo', 'poweroff']
         self._do_command_(cmd)
 
-    def restart_mqtt(self):
+    def restart_mosquitto(self):
         """
         This command restart the mosquitto.service systemd service
         """
         cmd = ['sudo', 'systemctl', 'restart', 'mosquitto.service']
         self._do_command_(cmd)
+
+    def get_mosquitto_status(self):
+        """
+        This function return TRue if mosquitto.service is running or False
+        """
+        cmd = ['sudo', 'systemctl', 'is-active', 'mosquitto.service']
+        stdout, stderr = self._do_command_(cmd)
+        stdout = stdout.decode("utf-8").strip()
+        if stdout == 'active':
+            return True
+        else:
+            return False

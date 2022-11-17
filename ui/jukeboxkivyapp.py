@@ -105,9 +105,10 @@ class JukeBoxKivyApp(App):
     height = 480
     log = Logger()
     mod_name = os.path.basename(__file__)
-    client_id = '8217cc054f854c5a8a5c5b0bb7ff55bf'
-    client_secret = 'd344812b4d874d1aaa60731a6ce567bb'
+    client_id = Config().parser.get('spotify', 'clientid')
+    client_secret = Config().parser.get('spotify', 'clientsecret')
     current_screen = 'blank'
+    check_clock = None
 
     _track_playing_event_ = None
     _current_track_id_ = None
@@ -192,16 +193,19 @@ class JukeBoxKivyApp(App):
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "Unable to connect to MQTT broker."
             self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
         except SpotifyApiError as err:
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "Spotify server not started."
             self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
         except Exception as err:
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "ERR: {err}".format(err=err)
             self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
     def build(self):
         """
@@ -267,7 +271,7 @@ class JukeBoxKivyApp(App):
                                level=Logger.INFO)
                 system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
                 system_message_label.text = "Restart the MQTT broker"
-                SystemControl().restart_mqtt()
+                SystemControl().restart_mosquitto()
 
     def on_request_close(self, *args):
         """
@@ -475,3 +479,32 @@ class JukeBoxKivyApp(App):
         """
         self.current_screen = 'blank'
         self.screen_manager.current = self.current_screen
+
+    def check_system_state(self, dt):
+        """
+        This function check teh state of the spotify connect server and the
+        systemd service mosquitto.
+        """
+        state = {
+            'librespot': self.spotify_srv.running,
+            'mosquitto': SystemControl().get_mosquitto_status()
+        }
+        system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
+        spotify_message = ""
+        mqtt_message = ""
+        if state['librespot'] is True and state['mosquitto'] is True:
+            system_message_label.text = ""
+            self.check_clock.cancel()
+        else:
+            if state['librespot'] is False:
+                spotify_message = "The Spotify Server is not running. "
+            else:
+                spotify_message = ""
+            if state['mosquitto'] is False:
+                mqtt_message = "The MQTT Broker is not running. "
+            else:
+                mqtt_message = ""
+        system_message_label.text = "{spotify} {mqtt}".format(spotify=spotify_message, mqtt=mqtt_message)
+
+        return state
+

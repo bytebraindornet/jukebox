@@ -1,14 +1,11 @@
 import os
 import subprocess
-import spotipy
 import paho.mqtt.client as mqtt
 
-from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.event import EventDispatcher
 from system.configuration import Config
 from system.logger import Logger
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
-from spotify.spotifyerror import SpotifyApiError
 
 
 class SpotifyConnectServer(EventDispatcher):
