@@ -5,7 +5,7 @@ from system.logger import Logger
 
 class Control:
     """
-    The class 'Control' is used to conztrol the operating system.
+    The class 'Control' is used to control the operating system.
     """
     def __init__(self):
         """
