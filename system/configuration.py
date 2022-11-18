@@ -77,6 +77,7 @@ class Config:
             'mqttPort': 1883,
             'mqttKeepAlive': 60,
             'logLevel': 'debug',  # error, info, debug
+            'showcontrols': 'yes',
             'logFile': '/var/log/{app}.log'.format(app=self.DEFAULT_APPNAME)
         }
 

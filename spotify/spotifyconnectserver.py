@@ -96,7 +96,7 @@ class SpotifyConnectServer(EventDispatcher):
 
     def stop(self):
         """
-        This function call the cancel() function of self._event_ (instance of class 'kivy.clock.Clock'
+        This function call the cancel() function of self._event_ instance of class 'kivy.clock.Clock'
         to unschedule the calling of self.observer() and set the value of self.running to False.
         """
         self._process_.kill()
@@ -115,10 +115,10 @@ class SpotifyConnectServer(EventDispatcher):
     def on_connect(self, client, userdata, flags, rc):
         """
         This function is called by mqtt client if receives a CONACK.
-        :param client: the mqtt client as instance of paho.mqtt.client.Client()
-        :param userdata: the private user data as set in Client() or user_data_set()
-        :param flags: response flags sent by the broker
-        :param rc: the result code,
+        param client: the mqtt client as instance of paho.mqtt.client.Client()
+        param userdata: the private user data as set in Client() or user_data_set()
+        param flags: response flags sent by the broker
+        param rc: the result code,
             0: Connection successful
             1: Connection refused - incorrect protocol version
             2: Connection refused - invalid client identifier
@@ -132,14 +132,17 @@ class SpotifyConnectServer(EventDispatcher):
             self.log.write(message="spotify/# channel subscribed.",
                            module=self.name,
                            level=Logger.INFO)
+            self.log.write(message="userdata: {userdata}, flags: {flags}".format(userdata=userdata, flags=flags),
+                           module=self.name,
+                           level=Logger.DEBUG)
 
     def on_message(self, client, userdata, msg):
         """
         Called when a message has been received on a topic that the client subscribes to and the
         message does not match an existing topic filter callback.
-        :param client: the mqtt client as instance of paho.mqtt.client.Client()
-        :param userdata: the private user data as set in Client() or user_data_set()
-        :param msg: an instance of MQTTMessage. This is a class with members topic, payload, qos, retain.
+        param client: the mqtt client as instance of paho.mqtt.client.Client()
+        param userdata: the private user data as set in Client() or user_data_set()
+        param msg: an instance of MQTTMessage. This is a class with members topic, payload, qos, retain.
         """
         if msg.topic == "spotify/track_event":
             payload = msg.payload.decode("utf-8")

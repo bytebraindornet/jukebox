@@ -88,6 +88,7 @@ class BlankScreen(BaseScreen):
     corresponding kv-file blank.kv.
     """
     def __init__(self, **kwargs):
+        self.is_show_controls = Config().parser.getboolean('system', 'showcontrols')
         super(BlankScreen, self).__init__(**kwargs)
 
 

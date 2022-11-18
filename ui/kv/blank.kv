@@ -27,8 +27,10 @@
         id: short_cuts
         orientation: 'vertical'
         size_hint: None, None
-        size: 400, 200
+        height: 400
+        width: 400 if root.is_show_controls else 0
         pos: 10, root.height - self.height
+        opacity: 1 if root.is_show_controls else 0
 
         Label:
             size_hint: None, 1
@@ -37,9 +39,7 @@
             valign: 'middle'
             font_size: 18
             text_size: self.size
-            text:
-                '[Ctrl] + [q] Close the Application'
-
+            text: '[Ctrl] + [q] Close the Application'
         Label:
             size_hint: None, 1
             width: root.width
@@ -48,7 +48,6 @@
             font_size: 18
             text_size: self.size
             text: '[Ctrl] + [s] Restart Spotify.'
-
         Label:
             size_hint: None, 1
             width: root.width
@@ -57,7 +56,6 @@
             font_size: 18
             text_size: self.size
             text: '[Ctrl] + [r] Reboot the system.'
-
         Label:
             size_hint: None, 1
             width: root.width
@@ -66,7 +64,6 @@
             font_size: 18
             text_size: self.size
             text: '[Ctrl] + [p] Power off the system.'
-
         Label:
             size_hint: None, 1
             width: root.width
@@ -75,15 +72,14 @@
             font_size: 18
             text_size: self.size
             text: '[Ctrl] + [m] Restart the MQTT broker.'
-
         Label:
-            size_hint: None, 1
-            width: root.width
-            halign: 'left'
-            valign: 'middle'
-            font_size: 18
-            text_size: self.size
-            #text:
+            text: ''
+        Label:
+            text: ''
+        Label:
+            text: ''
+        Label:
+            text: ''
 
     # Main Layout
     BoxLayout:
