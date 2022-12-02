@@ -2,6 +2,7 @@
 
 import os
 import glob
+
 import spotipy
 import tempfile
 import urllib.request
@@ -26,6 +27,7 @@ from system.logger import Logger
 from spotify.spotifyconnectserver import SpotifyConnectServer
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
 from spotify.spotifyerror import SpotifyApiError
+from textwrap import TextWrapper
 
 
 class ImageButton(TouchRippleButtonBehavior, AsyncImage):
@@ -291,42 +293,22 @@ class JukeBoxKivyApp(App):
         album, track, artist image and album image.
         """
         track_id = args[1]
+
         if self._current_track_id_ != track_id:
             self._current_track_id_ = track_id
             self.log.write(message="New track id: {trackid}".format(trackid=track_id),
                            module=self.mod_name,
                            level=Logger.INFO)
+            try:
+                _track_ = self.get_track_information(track_id)
+                if _track_ != 404:
+                    self.set_track_information(_track_)
+                else:
+                    _track_ = self.get_episode_information(track_id)
+                    self.set_episode_information(_track_)
 
-            _track_ = self.get_track_information(track_id)
-            artist = _track_['artist']
-            self.log.write(message="New Artist: {artist}".format(artist=artist),
-                           module=self.mod_name,
-                           level=Logger.INFO)
-            artist_names = []
-            artist_ids = []
-            for item in artist:
-                artist_names.append(item.get('name'))
-                artist_ids.append(item.get('id'))
-            artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
-            artist_label.text = " ".join(artist_names)
-            artists = self.get_artist_information(artist_ids)
-            self.set_background_image(artists[0].get('images'))
-
-            album = _track_['album']
-            self.log.write(message="New Album: {album}".format(album=album),
-                           module=self.mod_name,
-                           level=Logger.INFO)
-            album_label = self.screen_manager.get_screen('spotify').ids.album_label
-            album_label.text = album['name']
-
-            title = _track_['track']
-            title_label = self.screen_manager.get_screen('spotify').ids.title_label
-            title_label.text = title
-
-            for img in _track_['image']:
-                if img.get('height') == 640:  # 640, 300 or 64 possible
-                    self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
-                    break
+            except SpotifyApiError as err:
+                pass
 
         self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
 
@@ -390,6 +372,37 @@ class JukeBoxKivyApp(App):
                 self.log.write("Unable to get audio features from Spotify: {err}".format(err=err))
                 raise SpotifyApiError
 
+    def get_episode_information(self, spotify_id):
+        """
+        This function get information about the current played episode of a podcast by using
+        the spotify id and return it in a dictionary
+        """
+        self.log.write(message="Episode ID: {spotify_id}".format(spotify_id=spotify_id),
+                       module=self.mod_name,
+                       level=Logger.DEBUG)
+        if spotify_id:
+            try:
+                _spotify_ = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+                    client_id=self.client_id,
+                    client_secret=self.client_secret
+                ))
+
+                _episode_ = _spotify_.episode(spotify_id, 'DE')
+
+                return _episode_
+            
+            except Exception as err:
+                if err.args[0] == 404:
+                    self.log.write(message=err.args[2],
+                                   module=self.mod_name,
+                                   level=Logger.INFO)
+                    return 404
+                else:
+                    self.log.write(message="Unable to get information from Spotify: {err}".format(err=err),
+                                   module=self.name,
+                                   level=Logger.ERROR)
+                    raise SpotifyApiError
+
     def get_track_information(self, spotify_track_id):
         """
         This function get information about the current track by using the trackid and publish
@@ -405,7 +418,7 @@ class JukeBoxKivyApp(App):
                     client_secret=self.client_secret
                 ))
 
-                _track_ = _spotify_.track('spotify:track:{trackid}'.format(trackid=spotify_track_id))
+                _track_ = _spotify_.track(spotify_track_id, None)
                 track = {
                     'artist': _track_.get('artists', None),
                     'album': _track_.get('album', None),
@@ -421,10 +434,74 @@ class JukeBoxKivyApp(App):
                 return track
 
             except Exception as err:
-                self.log.write(message="Unable to get information from Spotify: {err}".format(err=err),
-                               module=self.name,
-                               level=Logger.ERROR)
-                raise SpotifyApiError
+                if err.args[0] == 404:
+                    self.log.write(message=err.args[2],
+                                   module=self.mod_name,
+                                   level=Logger.INFO)
+                    return 404
+
+                else:
+                    self.log.write(message="Unable to get information from Spotify: {err}".format(err=err),
+                                   module=self.name,
+                                   level=Logger.ERROR)
+                    raise SpotifyApiError(err.args)
+
+    def set_episode_information(self, episode):
+        show = episode.get('show', [])
+
+        artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
+        artist_label.text = show.get('publisher', '')
+
+        album_label = self.screen_manager.get_screen('spotify').ids.album_label
+        album_label.text = show.get('name', '')
+
+        title_label = self.screen_manager.get_screen('spotify').ids.title_label
+        title_label.text = episode.get('name', '')
+
+        description_label = self.screen_manager.get_screen('spotify').ids.description_label
+        description = episode.get('description', "")
+        wrapper = TextWrapper()
+        description_label.width = self.width
+        description_label.text = "\n".join(wrapper.wrap(description))
+
+        for img in episode.get('images', []):
+            if img.get('height') == 640:  # 640, 300 or 64 possible
+                self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
+                break
+
+        self.set_background_image(show.get('images', []))
+
+    def set_track_information(self, track):
+        artist = track['artist']
+        artist_names = []
+        artist_ids = []
+        for item in artist:
+            artist_names.append(item.get('name'))
+            artist_ids.append(item.get('id'))
+        artist_label = self.screen_manager.get_screen('spotify').ids.artist_label
+        artist_label.text = " ".join(artist_names)
+        artists = self.get_artist_information(artist_ids)
+        self.set_background_image(artists[0].get('images'))
+
+        album = track['album']
+        self.log.write(message="New Album: {album}".format(album=album),
+                       module=self.mod_name,
+                       level=Logger.INFO)
+        album_label = self.screen_manager.get_screen('spotify').ids.album_label
+        album_label.text = album['name']
+
+        title = track['track']
+        title_label = self.screen_manager.get_screen('spotify').ids.title_label
+        title_label.text = title
+
+        description_label = self.screen_manager.get_screen('spotify').ids.description_label
+        description_label.width = 0
+        description_label.text = ""
+
+        for img in track['image']:
+            if img.get('height') == 640:  # 640, 300 or 64 possible
+                self.screen_manager.get_screen('spotify').ids.album_art.source = img.get('url')
+                break
 
     def set_background_image(self, images):
         """

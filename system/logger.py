@@ -30,7 +30,7 @@ class Logger:
         else:
             log_level = "{level}".format(level=level)
 
-        if message is not None and module is not None and level >= self._level_:
+        if message is not None and module is not None and level <= self._level_:
             with open(self._log_file_, "a") as fp:
                 fp.write("{ts} {level} {module} {message}\n".format(ts=datetime.now(),
                                                                     level=log_level,

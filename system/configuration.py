@@ -7,9 +7,9 @@ from pathlib import Path
 class Config:
     """
     The class 'Config' try to load the configuration from one of the following files:
-        1. $HOME/.config/bytebrain/gui.ini
-        2. $HOME/.bytebrain.ini
-        3. /etc/bytebrain/gui.ini
+        1. $HOME/.config/jukebox/spotify.ini
+        2. $HOME/.spotify.ini
+        3. /etc/jukebox/spotify.ini
     The first file which is found being used. All the following are ignored. The
     user-specific settings / config files have priority.
     To get access to the configuration, the member parser must be used. This is an instance
@@ -24,7 +24,10 @@ class Config:
     DEFAULT_CONFIG_FILE = os.path.join(".config", DEFAULT_APPNAME, DEFAULT_CFG_NAME)
     """ The preferred location of the configuration file """
 
-    DEFAULT_KV_DIR = (Path.cwd().absolute()).joinpath("ui", "kv")
+    PY_FILE = os.path.realpath(__file__)
+    PY_DIR = os.path.dirname(PY_FILE)
+    PY_DIR_PARENT = Path(PY_DIR).parent
+    DEFAULT_KV_DIR = PY_DIR_PARENT.joinpath("ui", "kv")
     """ The default location for kv, icons and images used ba user interface. """
 
     def __init__(self):
@@ -52,6 +55,11 @@ class Config:
         else:
             self.parser.read(self.config_file)
 
+        if self.parser.getboolean("system", "kivylog") is True:
+            os.environ["KIVY_NO_CONSOLELOG"] = "1"
+        else:
+            os.environ["KIVY_NO_CONSOLELOG"] = "0"
+
     def print(self):
         """
         This function print the configuration to stdout
@@ -78,6 +86,7 @@ class Config:
             'mqttKeepAlive': 60,
             'logLevel': 'debug',  # error, info, debug
             'showcontrols': 'yes',
+            'kivylog': 'no',
             'logFile': '/var/log/{app}.log'.format(app=self.DEFAULT_APPNAME)
         }
 
