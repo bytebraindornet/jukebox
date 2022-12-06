@@ -37,7 +37,6 @@ class Config:
         In case that no file exist, set the value of self.config_file to None, set the mandatory
         parameters default values and write it to $HOME/.config/jukebox/gui.ini.
         """
-
         if os.path.isfile(os.path.join(str(Path.home()), self.DEFAULT_CONFIG_FILE)):
             self.config_file = os.path.join(str(Path.home()), self.DEFAULT_CONFIG_FILE)
         elif os.path.isfile(os.path.join(str(Path.home()), ".{appname}.ini".format(appname=self.DEFAULT_APPNAME))):
