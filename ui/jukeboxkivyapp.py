@@ -4,7 +4,7 @@ import os
 import glob
 
 import spotipy
-import tempfile
+import random
 import urllib.request
 
 from PIL import Image
@@ -518,8 +518,15 @@ class JukeBoxKivyApp(App):
             artist_art.source = "{0}/default/wallpapers/one_pixel.png".format(self.kv_file_dir)
             return
 
-        bg_image = tempfile.mktemp(suffix="_{appname}.png".format(appname=Config.DEFAULT_APPNAME))
+        # create a random string as part of the filename
+        random_string = ''
+        for _ in range(10):
+            random_integer = random.randint(97, 97 + 26 - 1)
+            flip_bit = random.randint(0, 1)
+            random_integer = random_integer - 32 if flip_bit == 1 else random_integer
+            random_string += (chr(random_integer))
 
+        bg_image = "/tmp/{rnd_str}_{appname}.png".format(rnd_str=random_string, appname=Config.DEFAULT_APPNAME)
         image = None
         for img in images:
             if image is None or image.get('width') < img.get('width'):
