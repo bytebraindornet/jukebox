@@ -9,6 +9,7 @@ import urllib.request
 
 from PIL import Image
 from screeninfo import get_monitors
+from textwrap import TextWrapper
 from spotipy.oauth2 import SpotifyClientCredentials
 from kivy.app import App
 from kivy.uix.image import AsyncImage
@@ -27,7 +28,6 @@ from system.logger import Logger
 from spotify.spotifyconnectserver import SpotifyConnectServer
 from spotify.spotifyerror import MQTTConnectionRefused as MQTTConnectionRefusedError
 from spotify.spotifyerror import SpotifyApiError
-from textwrap import TextWrapper
 
 
 class ImageButton(TouchRippleButtonBehavior, AsyncImage):
@@ -116,7 +116,7 @@ class JukeBoxKivyApp(App):
     _track_playing_event_ = None
     _current_track_id_ = None
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """
         Initialize self. See help(self) for accurate signature. Call the __init__ function
         of his parent. The global configuration is printed on stdout.
@@ -195,19 +195,19 @@ class JukeBoxKivyApp(App):
         except MQTTConnectionRefusedError as err:
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "Unable to connect to MQTT broker."
-            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.log.write(message=f"{err}", module=self.mod_name, level=Logger.ERROR)
             self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
         except SpotifyApiError as err:
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "Spotify server not started."
-            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.log.write(message=f"{err}", module=self.mod_name, level=Logger.ERROR)
             self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
         except Exception as err:
             system_message_label = self.screen_manager.get_screen(self.current_screen).ids.system_message_label
             system_message_label.text = "ERR: {err}".format(err=err)
-            self.log.write(message="{err}".format(err=err), module=self.mod_name, level=Logger.ERROR)
+            self.log.write(message=f"{err}", module=self.mod_name, level=Logger.ERROR)
             self.check_clock = Clock.schedule_interval(self.check_system_state, 2.0)
 
     def build(self):
@@ -236,8 +236,12 @@ class JukeBoxKivyApp(App):
 
     def on_keyboard(self, window, key, scancode, codepoint, modifier):
         """
-        This function is called when a key on the keyboard is pressed.
+        This function is called when a keyboard key is pressed.
         """
+        self.log.write(message=f"on_keyboard({window}, {key}, {scancode}, {codepoint}, {modifier})",
+                       module=self.mod_name,
+                       level=Logger.DEBUG)
+
         if modifier == ['ctrl']:
             if codepoint == 'q':
                 self.on_request_close()
@@ -307,7 +311,7 @@ class JukeBoxKivyApp(App):
                     _track_ = self.get_episode_information(track_id)
                     self.set_episode_information(_track_)
 
-            except SpotifyApiError as err:
+            except SpotifyApiError:
                 pass
 
         self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
@@ -321,6 +325,8 @@ class JukeBoxKivyApp(App):
         self.log.write("{args}".format(args=args), module=self.mod_name, level=Logger.DEBUG)
 
         event = args[1]
+        print("Event: {ev}".format(ev=event))
+
         if event == 'started':
             Clock.schedule_once(self.set_spotify_screen)
         elif event == 'stopped':
