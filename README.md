@@ -30,6 +30,7 @@ loglevel = debug
 showcontrols = no
 kivylog = no
 logfile = /var/log/jukebox.log
+librespot = /usr/bin/librespot
 
 [spotify]
 name = jukebox
@@ -51,6 +52,7 @@ eventgateway = /home/jukebox/app/jukebox/spotify/spotifyeventgateway.py
 | loglevel      | The level of detail of messages in the log file                                                                                                                                                                           |
 | showcontrols  | If it is set to yes the keyboard shortcut are displayed on the home screen.                                                                                                                                               |
 | kivylog       | If it set to yes, the kivy console log is activate                                                                                                                                                                        |
+| librespot     | Path to the librespot executable                                                                                                                                                                                          |
 | logfile       | The path to the application logfile                                                                                                                                                                                       |
 | name          | The name that appears in Spotify when you try to connect to the device                                                                                                                                                    |
 | bitrate       | The bitrate (kbps, 96, 120, 320 possible.                                                                                                                                                                                 |

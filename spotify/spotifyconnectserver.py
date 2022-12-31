@@ -47,11 +47,12 @@ class SpotifyConnectServer(EventDispatcher):
         spotify_device_type = self.cfg.get('spotify', 'devicetype')
         spotify_event_gateway = self.cfg.get('spotify', 'eventGateway')
         volume_normalization = self.cfg.getboolean('spotify', 'normalization')
+        librespot_bin = self.cfg.get('system', 'librespot')
 
         _mqtt_is_running_ = False
         _librespot_is_running_ = False
 
-        cmd = ['/usr/bin/librespot',
+        cmd = [librespot_bin,
                '-n \'{name}\''.format(name=spotify_name),
                '-b', str(spotify_bitrate),
                '-c', spotify_cache,
@@ -99,8 +100,10 @@ class SpotifyConnectServer(EventDispatcher):
         This function call the cancel() function of self._event_ instance of class 'kivy.clock.Clock'
         to unschedule the calling of self.observer() and set the value of self.running to False.
         """
-        self._process_.kill()
-        self._mqtt_client_.loop_stop()
+        if self._process_ is not None:
+            self._process_.kill()
+        if self._mqtt_client_ is not None:
+            self._mqtt_client_.loop_stop()
         self.running = False
 
     def restart(self):

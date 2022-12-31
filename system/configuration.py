@@ -21,7 +21,8 @@ class Config:
 
     DEFAULT_CFG_NAME = "spotify.cfg"
 
-    DEFAULT_CONFIG_FILE = os.path.join(".config", DEFAULT_APPNAME, DEFAULT_CFG_NAME)
+    DEFAULT_CONFIG_PATH = os.path.join(str(Path.home()), ".config", DEFAULT_APPNAME)
+    DEFAULT_CONFIG_FILE = os.path.join(DEFAULT_CONFIG_PATH, DEFAULT_CFG_NAME)
     """ The preferred location of the configuration file """
 
     PY_FILE = os.path.realpath(__file__)
@@ -86,7 +87,8 @@ class Config:
             'logLevel': 'debug',  # error, info, debug
             'showcontrols': 'yes',
             'kivylog': 'no',
-            'logFile': '/var/log/{app}.log'.format(app=self.DEFAULT_APPNAME)
+            'logFile': '/var/log/{app}.log'.format(app=self.DEFAULT_APPNAME),
+            'librespot': '/usr/bin/librespot'
         }
 
         self.parser['spotify'] = {
@@ -102,8 +104,8 @@ class Config:
             'eventgateway': '{cwd}/spotify/spotifyeventgateway.py'.format(cwd=os.getcwd())
         }
 
-        if os.path.isdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME)) is False:
-            os.mkdir(os.path.join(str(Path.home()), ".config", self.DEFAULT_APPNAME))
+        if os.path.isdir(self.DEFAULT_CONFIG_PATH) is False:
+            os.mkdir(self.DEFAULT_CONFIG_PATH)
         self.config_file = os.path.join(str(Path.home()), self.DEFAULT_CONFIG_FILE)
         with open(self.config_file, "w") as fp_cfg_file:
             self.parser.write(fp_cfg_file)
